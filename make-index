@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -e
+
+
+
+TOPDIR="$(pwd)"
+SCRIPT_DIR=${TOPDIR}/scripts
+
+[ -x "${TOPDIR}/tool/mkhash" ] || {
+gcc -o "${TOPDIR}/tool/mkhash" "${TOPDIR}/tool/mkhash.c"
+}
+
+export PATH="${TOPDIR}/tool:${PATH}"
+
+pkg_dir=$1
+
+if [ -z $pkg_dir ] || [ ! -d $pkg_dir ]; then
+	echo "Usage: make-index <package_directory>" >&2
+	exit 1
+fi
+
+(
+	cd $pkg_dir && [ -n "$(find . -maxdepth 1 -name "*.ipk")" ] || exit 1
+
+	echo "Generating package index..."
+
+	${SCRIPT_DIR}/ipkg-make-index.sh . 2>&1 > Packages.manifest
+	grep -avE '^(Maintainer|LicenseFiles|Source|Require)' Packages.manifest > Packages && \
+		gzip -9nc Packages > Packages.gz
+)
